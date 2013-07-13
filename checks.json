@@ -1,5 +1,4 @@
-[
- "h1",
+["h1",
  ".navigation",
  ".logo",
  ".blank",
@@ -14,5 +13,4 @@
  ".section1",
  ".section2",
  ".faq",
- ".footer", 
-]
+ ".footer"]
