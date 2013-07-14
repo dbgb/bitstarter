@@ -37,7 +37,7 @@ var assertFileExists = function(infile) {
     var instr = infile.toString();
     if(!fs.existsSync(instr)) {
 	console.log("%s does not exist. Exiting.", instr);
-	process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
+	process.exit(1);
     }
     return instr;
 };
@@ -51,6 +51,7 @@ var loadChecks = function(checksfile) {
 };
 
 var checkHtmlFile = function(htmlfile, checksfile) {
+    // Check static HTML file for rule matches within checksfile
     $ = cheerioHtmlFile(htmlfile);
     var checks = loadChecks(checksfile).sort();
     var out = {};
@@ -61,14 +62,18 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     return out;
 };
 
-var checkURL = function(url) {
-   restler.get(url).on('complete', function(result) {
-    if (result instanceof Error) {
-     console.log('Error: ' + result.message);
-    } else {
-     console.log(result);
-   }});
-   return;
+var getUrlContent = function(url, checksfile, callback) {
+    // TODO - Push url html content to generic callback
+    //        and DRY
+    restler.get(url).on('complete', function(result) {
+	//callback(result, checksfile);
+
+	fs.writeFileSync('~tmp.html', result);
+	checkJson = checkHtmlFile('~tmp.html', checksfile);
+	var outJson = JSON.stringify(checkJson, null, 4);
+	fs.writeFileSync('outJson.json', outJson);
+	console.log(outJson);
+    });
 };
 
 var clone = function(fn) {
@@ -79,13 +84,22 @@ var clone = function(fn) {
 
 if(require.main == module) {
     program
-	.option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
-	.option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-	.option('-u, --url <check_url>', 'Path to URL', clone(checkURL), URL_DEFAULT)
-	.parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+     .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
+     .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+     .option('-u, --url <url_path>', 'Path to URL', URL_DEFAULT)
+     .parse(process.argv);
+    // Ignore file flag if url flag present
+    if(program.url) {
+       getUrlContent(program.url, program.checks);
+    }
+    else {
+       var checkJson = checkHtmlFile(program.file, program.checks);
+       var outJson = JSON.stringify(checkJson, null, 4);
+       console.log(outJson);
+    }
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
+
+//tests
+// geturlcontent('http://salty-brushlands-2700.herokuapp.com/', 'checks.json', checkhtmlfile);
